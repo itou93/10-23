@@ -10,29 +10,35 @@ const deptNames = {
 let clickCount = 0;
 let clickTimer = null;
 
-// 来場者向けの案内メッセージ更新処理
+// 来場者向けの案内メッセージ＆ボタン表示制御
 function updateSoftLog(status, message, isSuccess = true) {
     const statusEl = document.getElementById('log-status');
     const msgEl = document.getElementById('log-message');
+    const btnEl = document.getElementById('btn-to-test');
 
     if (statusEl && msgEl) {
         statusEl.textContent = status;
         if (isSuccess) {
             statusEl.style.background = '#d1fae5';
             statusEl.style.color = '#047857';
+            // マーカー検出時のみ 3D体験画面への移動ボタンを表示
+            if (btnEl) btnEl.style.display = 'block';
         } else {
             statusEl.style.background = '#e2e8f0';
             statusEl.style.color = '#475569';
+            // マーカーを見失っている時はボタンを隠す
+            if (btnEl) btnEl.style.display = 'none';
         }
         msgEl.textContent = message;
     }
 }
 
-// 重なり防止のため自動ポップアップ処理を停止（パネルに集約）
+// 重なり防止のため自動ポップアップ処理を停止
 function showNearObjectLog() {
     return;
 }
 
+// 動画の自動再生（タップ時のミュート解除準備対応）
 function handlePlayVideo(markerElem, path) {
     const videos = document.querySelectorAll('video');
     videos.forEach(v => {
@@ -62,19 +68,25 @@ function handlePauseVideo(path) {
     });
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-
-    const unlockAudio = () => {
-        const videos = document.querySelectorAll('video');
-        videos.forEach(v => {
-            if (!v.paused) v.muted = false;
+// WebARのカメラストリームを完全に停止して許可再要求を防ぐ関数
+function stopWebcamStream() {
+    try {
+        const videoElems = document.querySelectorAll('video');
+        videoElems.forEach(video => {
+            if (video.srcObject) {
+                const stream = video.srcObject;
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                video.srcObject = null;
+            }
         });
-        window.removeEventListener('click', unlockAudio);
-        window.removeEventListener('touchstart', unlockAudio);
-    };
-    window.addEventListener('click', unlockAudio);
-    window.addEventListener('touchstart', unlockAudio);
+    } catch (e) {
+        console.warn("カメラ停止処理エラー:", e);
+    }
+}
 
+// マーカーイベントのバインド（動的追加対応）
+function bindMarkerEvents() {
     // --- マーカー1 ---
     const m1 = document.getElementById('ar-marker-1');
     if (m1) {
@@ -128,20 +140,69 @@ window.addEventListener('DOMContentLoaded', () => {
             handlePauseVideo('jgvideo2.mp4');
         });
     }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    const unlockAudio = () => {
+        const videos = document.querySelectorAll('video');
+        videos.forEach(v => {
+            if (!v.paused) v.muted = false;
+        });
+        window.removeEventListener('click', unlockAudio);
+        window.removeEventListener('touchstart', unlockAudio);
+    };
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+
+    // 既に a-scene が存在している場合のイベントバインド（初期状態になければ startAR でバインド）
+    bindMarkerEvents();
+});
+
+// ページ離脱時にカメラを完全に破棄
+window.addEventListener('beforeunload', () => {
+    stopWebcamStream();
 });
 
 function goBack() {
+    stopWebcamStream();
     window.location.href = 'index.html';
 }
 
 function switchToMarkerless() {
+    stopWebcamStream();
     window.location.href = 'test.html';
 }
 
+// 説明画面の「Next ➔」を押して初めてカメラを起動
 function startAR() {
     const screen = document.getElementById('explanation-screen');
     if (screen) {
         screen.remove();
+    }
+
+    const container = document.getElementById('ar-container');
+    if (container && !document.getElementById('ar-scene')) {
+        container.innerHTML = `
+            <a-scene 
+                id="ar-scene"
+                embedded 
+                arjs="sourceType: webcam; debugUIEnabled: false; patternRatio: 0.7; trackingMethod: best;" 
+                vr-mode-ui="enabled: false">
+            
+                <a-entity light="type: ambient; color: #ffffff; intensity: 1.8;"></a-entity>
+
+                <a-marker type="pattern" url="./pattern-koshou.patt" patternRatio="0.7" id="ar-marker-1"></a-marker>
+                <a-marker type="pattern" url="./pattern-JGmaeker.patt" patternRatio="0.7" id="ar-marker-2"></a-marker>
+                <a-marker type="pattern" url="./pattern-j.patt" patternRatio="0.7" id="ar-marker-3"></a-marker>
+
+                <a-entity camera></a-entity>
+            </a-scene>
+        `;
+
+        // 動的に追加した要素へマーカー検出イベントを登録
+        setTimeout(() => {
+            bindMarkerEvents();
+        }, 300);
     }
 }
 
@@ -240,27 +301,5 @@ function handleTitleClick() {
         clickTimer = setTimeout(() => {
             clickCount = 0;
         }, 1500);
-    }s
-}
-// 来場者向けの案内メッセージ＆ボタン表示制御
-function updateSoftLog(status, message, isSuccess = true) {
-    const statusEl = document.getElementById('log-status');
-    const msgEl = document.getElementById('log-message');
-    const btnEl = document.getElementById('btn-to-test');
-
-    if (statusEl && msgEl) {
-        statusEl.textContent = status;
-        if (isSuccess) {
-            statusEl.style.background = '#d1fae5';
-            statusEl.style.color = '#047857';
-            // マーカー検出時のみボタンを表示
-            if (btnEl) btnEl.style.display = 'block';
-        } else {
-            statusEl.style.background = '#e2e8f0';
-            statusEl.style.color = '#475569';
-            // マーカーを見失っている時はボタンを隠す
-            if (btnEl) btnEl.style.display = 'none';
-        }
-        msgEl.textContent = message;
     }
 }
