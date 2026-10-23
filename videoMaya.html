@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@master/aframe/build/aframe-ar.js"></script>
 
     <link rel="stylesheet" href="Style.css">
-    <script src="Script.js?v=9"></script>
+    <script src="Script.js?v=10"></script>
 
     <style>
         /* 画面下部の柔らかいログパネル */
@@ -80,20 +80,8 @@
     <button type="button" class="btn-back" onclick="goBack()">← 戻る</button>
     <button type="button" class="btn-collection" onclick="openCollection()">🎬 解放動画</button>
 
-    <!-- ARシーン（ログおよび認識判定用） -->
-    <a-scene 
-        embedded 
-        arjs="sourceType: webcam; debugUIEnabled: false; patternRatio: 0.7; trackingMethod: best;" 
-        vr-mode-ui="enabled: false">
-    
-        <a-entity light="type: ambient; color: #ffffff; intensity: 1.8;"></a-entity>
-
-        <a-marker type="pattern" url="./pattern-koshou.patt" patternRatio="0.7" id="ar-marker-1"></a-marker>
-        <a-marker type="pattern" url="./pattern-JGmaeker.patt" patternRatio="0.7" id="ar-marker-2"></a-marker>
-        <a-marker type="pattern" url="./pattern-j.patt" patternRatio="0.7" id="ar-marker-3"></a-marker>
-
-        <a-entity camera></a-entity>
-    </a-scene>
+    <!-- 【変更箇所1】ARシーン用の空コンテナ（最初からa-sceneを置かないことで、Next押下前のアラート要求を防止） -->
+    <div id="ar-container"></div>
 
     <!-- 来場者向け案内ログ・移動パネル -->
     <div id="soft-log-panel">
@@ -101,8 +89,8 @@
             <span>📷 マーカー読み取り</span>
             <span id="log-status" class="log-status-badge">スキャン中</span>
         </div>
-        <div id="log-message" class="log-message">カメラをマーカーに向けてみてください</div>
-        <!-- 初期状態では style="display: none;" で非表示 -->
+        <div id="log-message" class="log-message">近くに読み取れるものがあるかも！ボタンを押してみよう</div>
+        <!-- 【変更箇所2】初期状態では非表示。マーカー認識時にScript.jsから表示制御 -->
         <a href="test.html" id="btn-to-test" class="btn-to-test" style="display: none;">3D体験画面へ移動 ➔</a>
     </div>
 
